@@ -4,12 +4,24 @@
   "description": "a backend project",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "nodemon src/index.js"
   },
   "keywords": [
     "Javascript",
     "Backend"
   ],
   "author": "\"Kartikey Setia\"",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "nodemon": "^3.1.4",
+    "prettier": "^3.3.3"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "ejs": "^3.1.10",
+    "express": "^4.19.2",
+    "mongoose": "^8.6.1",
+    "nanoid": "^5.1.5",
+    "shortid": "^2.2.17"
+  }
 }

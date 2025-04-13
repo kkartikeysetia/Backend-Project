@@ -1,0 +1,5 @@
+# keep senstive files jo files hamko puch nhi krni h yaha
+#  nodemon : server restart file save per 
+
+node_modules/
+.env
