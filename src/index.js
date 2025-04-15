@@ -1,32 +1,41 @@
-// Design a URL shortener service that takes in a valid URL and returns a shortened URL, redirecting the user to the previously provided URL.
-// Also, keep track of total visits/clicks on the URL.
-// Routes
-// POST /URL - Generates a new short URL and returns the shortened URL in the format example.com/random-id.
-// GET /:id - Redirects the user to the original URL
-// GET /URL/analytics/:id - Returns the clicks for the provided short id.
+// 1. Imports
+// 2. App initialization
+// 3. Middleware definitions
+// 4. Route definitions
+// 5. DB connection
+// 6. Start server (only after DB is connected)
 
-const express = require("express"); // STEP 1
-const URLRoute = require("./routes/url.js"); // STPE 2
-
-const { connectToMongoDB } = require("./connect.js"); // STEP 3
-const URL = require("./models/url.js"); // becoz of step 6 yeh apne controllers mai kara tha
-
+// Imports
+const express = require("express"); // STEP 1 Express helps create web servers and handle routes easily.After loading you can use express() to initialize your app
 const path = require("path"); // STEP 8
 
+// Routes
+// Whatever you export in routes/url.js is used here with .use("/url", ...)
+const URLRoute = require("./routes/url.js"); // STPE 2 : Brings in the URL-related routes like /url, /analytics/:id.(get post), This avoids cluttering the main file.
 const staticRoute = require("./routes/staticRouter.js"); // STEP 11
 
+//  DB Connection
+const { connectToMongoDB } = require("./connect.js"); // STEP 3 : Imports a function that connects to your MongoDB database.
+// Why: Your app needs DB access before storing or fetching any data. How: This function uses Mongoose to connect using a MongoDB URI.
+
+// Optional: only if needed in this file
+const URL = require("./models/url.js"); // becoz of step 6 yeh apne controllers mai kara tha
+
 const app = express(); // STEP 1
-const PORT = 8001;
+const PORT = 8001; // STEP 1
 
-// FORM DATA KO PASS KRNE KAI LIYE EK OR MIDDLEWARE CHAHIYE
-app.use(express.urlencoded({ extended: false })); // STEP 13
+// Middlewares
+// FORM DATA KO Parse KRNE KAI LIYE this MIDDLEWARE CHAHIYE
+app.use(express.urlencoded({ extended: false })); //  Makes req.body usable for form submissions. // STEP 13
 
-// use middlware(express.json) : jo incoming body ko pass kar sakey // STEP 5
-app.use(express.json());
+// use middlware(express.json) : jo incoming body ko parse karne kai liye : parses them into JS objects. // STEP 5
+app.use(express.json()); // Without it, req.body for JSON POST requests won’t work Because when we send JSON via POST (like in Postman), backend won’t understand it without this
 
-app.use("/url", URLRoute); // STEP 2 // POST /url here!
-app.use("/", staticRoute); // STEP 12 make static route page
+//  Use Routes
+app.use("/url", URLRoute); // STEP 2  All /url related requests go to url.js router ,  All logic about URL shortening stays in one place.
+app.use("/", staticRoute); // STEP 12 make static route page : Handle root (homepage) route, To display the form and URL analytics on a browser.
 
+// Connect to DB and Start Server
 connectToMongoDB("mongodb://localhost:27017/short-url").then(
   () => console.log("mongo db connected") // STEP  4 ( / database ka naam )
 );
@@ -57,19 +66,21 @@ short-url> db.urls.find({})
 
 */
 
-// STEP 6 (GET ROUTE) // firstly we will fetch from Database, usko increment krna & uske baad user ko redirect krna hai
+// So when someone goes to localhost:8001/oIY7R9k4u, they get redirected to ORIGINAL URL
+// STEP 6 (GET ROUTE) Handles the actual redirection logic for short URLs.
+// firstly we will fetch from Database, usko increment krna & uske baad user ko redirect krna hai
 app.get("/:shortId", async (req, res) => {
-  const shortId = req.params.shortId; // jo shortid merko user ne dii hai
+  const shortId = req.params.shortId; // jo shortid merko user ne dii hai : Gets shortId from req.params
 
   const entry = await URL.findOneAndUpdate(
     {
-      shortId,
+      shortId, // Finds matching URL in DB.
     },
     {
       $push: {
         // push use kiya becoz array hai
         visitHistory: {
-          Timestamp: Date.now(),
+          Timestamp: Date.now(), // Increments the visitHistory with timestamp.
         },
       },
     },
@@ -79,7 +90,7 @@ app.get("/:shortId", async (req, res) => {
     return res.status(404).json({ error: "Short URL not found" });
   }
 
-  return res.redirect(entry.redirectURL);
+  return res.redirect(entry.redirectURL); // Redirects the user to the original long URL.
 });
 
 // ALSO POSTMAN PER YEH TYPE KIYA :http://localhost:8001/oIY7R9k4u   // short id got after psot rquest // after paste in chrome i got same website
@@ -119,8 +130,10 @@ short-url> db.urls.find({})
 
 // SERVER SIDE RENDERING
 app.set("view engine", "ejs"); // STEP 7 mene express ko bta diya mene view engine use krna h server side rendering kai liye
+// Sets EJS as the view engine for SSR
 
 app.set("views", path.resolve("./views")); // STEP 9 mera viewengine ejs hai & files sari yaha padhi h
+// tells Express where your .ejs templates are stored. : Why: Without this, Express won’t know where to look for views
 
 // STEP 10 (EJS SERVER SIDE RENDERING)
 app.get("/test", async (req, res) => {
@@ -137,47 +150,3 @@ app.listen(PORT, () => console.log(`Server Started:${PORT}`));
 // render all urls to frontend: make static route mai url find nd next line
 
 // NOW MAKE TABLE : URL per kitne bari clicks huye
-
-// database : prblms aye gyi (try, catch mai wrap ) (database sai baat kar time lgta h : ASYNCH AWAIT )
-
-// require("dotenv").config({ path: "./env" });
-// import dotenv from "dotenv";
-// import mongoose from "mongoose";
-// import { DB_NAME } from "./constants";
-// import connectDB from "./db/index.js";
-
-// take file in db folder wha code likha kar impoert
-
-// dotenv.config({
-//   path: "./.env",
-// });
-
-// connectDB();
-
-/*
-import express from "express"
-const app=express()   // express app : reprsents server 
-// IIFE :  runs immediately after being defined
-// you can use await to pause and wait for things to finish (like connecting to a database) without needing to create a new function somewhere else.
-(async () => {
-  try {
-    await mongoose.connect(`${process.env.MONGODB_URI}/${DB_NAME}`); // connect kai liye string (environment variables for security.)
-    //database jab connected to app LISTENRES MILTE H
-    // Eg: ERRORR EVNENT LISNER
-    app.on("error", (error)=>{    // express mai error
-        console.log("ERROR: ", error);
-        throw error
-        
-    })
-    // IF the database connection is successful, the server starts listening on the specified port
-    app.listen(process.env.PORT, ()=>{
-        console.log(`App is listenig on port ${process.env.PORT}`);
-        
-    })
-
-  } catch (error) {
-    console.log("ERROR: ", error);
-    throw err;
-  }
-})();
-*/
